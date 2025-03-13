@@ -31,6 +31,7 @@ import math
 import numpy
 import osmosdr
 import time
+import sip
 import threading
 
 
@@ -84,7 +85,7 @@ class test(gr.top_block, Qt.QWidget):
         ##################################################
         self.sq_wave = sq_wave = (1.0, ) * sps_tx
         self.gaussian_taps = gaussian_taps = filter.firdes.gaussian(1.0, sps_tx, 1.0, 4*sps_tx)
-        self.deviation = deviation = 50e3
+        self.deviation = deviation = 25e3
         self.variable_ieee802_15_4_variant_decoder_0 = variable_ieee802_15_4_variant_decoder_0 = satnogs.ieee802_15_4_variant_decoder([0b01010101]*12, 0, [0x1A, 0xCF, 0xFC, 0x1D], 4, satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, (448-4), True, False)
         self.variable_ieee802_15_4_encoder_0 = variable_ieee802_15_4_encoder_0 = satnogs.ieee802_15_4_encoder(0b00001000, 12, [0x1A, 0xCF, 0xFC, 0x1D], satnogs.crc.NONE, satnogs.whitening.make_none(), False, False)
         self.samp_rate = samp_rate = 2e6
@@ -96,6 +97,48 @@ class test(gr.top_block, Qt.QWidget):
         ##################################################
 
         self.satnogs_frame_encoder_0 = satnogs.frame_encoder(variable_ieee802_15_4_encoder_0)
+        self.qtgui_freq_sink_x_0_0 = qtgui.freq_sink_c(
+            1024, #size
+            window.WIN_BLACKMAN_hARRIS, #wintype
+            401e6, #fc
+            samp_rate, #bw
+            "", #name
+            1,
+            None # parent
+        )
+        self.qtgui_freq_sink_x_0_0.set_update_time(0.10)
+        self.qtgui_freq_sink_x_0_0.set_y_axis((-140), 10)
+        self.qtgui_freq_sink_x_0_0.set_y_label('Relative Gain', 'dB')
+        self.qtgui_freq_sink_x_0_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
+        self.qtgui_freq_sink_x_0_0.enable_autoscale(False)
+        self.qtgui_freq_sink_x_0_0.enable_grid(False)
+        self.qtgui_freq_sink_x_0_0.set_fft_average(1.0)
+        self.qtgui_freq_sink_x_0_0.enable_axis_labels(True)
+        self.qtgui_freq_sink_x_0_0.enable_control_panel(False)
+        self.qtgui_freq_sink_x_0_0.set_fft_window_normalized(False)
+
+
+
+        labels = ['', '', '', '', '',
+            '', '', '', '', '']
+        widths = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        colors = ["blue", "red", "green", "black", "cyan",
+            "magenta", "yellow", "dark red", "dark green", "dark blue"]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.qtgui_freq_sink_x_0_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_freq_sink_x_0_0.set_line_label(i, labels[i])
+            self.qtgui_freq_sink_x_0_0.set_line_width(i, widths[i])
+            self.qtgui_freq_sink_x_0_0.set_line_color(i, colors[i])
+            self.qtgui_freq_sink_x_0_0.set_line_alpha(i, alphas[i])
+
+        self._qtgui_freq_sink_x_0_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0_0.qwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_freq_sink_x_0_0_win)
         self.pfb_arb_resampler_xxx_0_0_0 = pfb.arb_resampler_ccf(
             (samp_rate/(baudrate*sps_tx)),
             taps=None,
@@ -121,11 +164,14 @@ class test(gr.top_block, Qt.QWidget):
         self.digital_chunks_to_symbols_xx_0 = digital.chunks_to_symbols_bf([-1, 1], 1)
         self.digital_burst_shaper_xx_0 = digital.burst_shaper_cc(([]), 200, 400, False, "packet_len")
         self.blocks_vector_source_x_0 = blocks.vector_source_b([0,0,0,0,0,0,0,1], True, 1, [])
+        self.blocks_throttle2_0 = blocks.throttle( gr.sizeof_char*1, 1000, True, 0 if "auto" == "auto" else max( int(float(0.1) * 1000) if "auto" == "time" else int(0.1), 1) )
         self.blocks_tagged_stream_multiply_length_0_0_0 = blocks.tagged_stream_multiply_length(gr.sizeof_gr_complex*1, 'packet_len', ((sps_tx * 8) ))
         self.blocks_tagged_stream_multiply_length_0_0 = blocks.tagged_stream_multiply_length(gr.sizeof_gr_complex*1, 'packet_len', ((samp_rate/(baudrate*sps_tx))))
         self.blocks_tagged_stream_align_0 = blocks.tagged_stream_align(gr.sizeof_gr_complex*1, 'packet_len')
         self.blocks_stream_to_tagged_stream_0 = blocks.stream_to_tagged_stream(gr.sizeof_char, 1, 80, "packet_len")
+        self.blocks_stream_mux_0 = blocks.stream_mux(gr.sizeof_char*1, (1, 1000))
         self.blocks_packed_to_unpacked_xx_0 = blocks.packed_to_unpacked_bb(1, gr.GR_MSB_FIRST)
+        self.blocks_null_source_0 = blocks.null_source(gr.sizeof_char*1)
         self.blocks_message_debug_0_0 = blocks.message_debug(True, gr.log_levels.info)
         self.blocks_head_0 = blocks.head(gr.sizeof_char*1, 80)
         self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(((math.pi*modulation_index) / sps_tx - (((math.pi*modulation_index) / sps_tx) * 0.1)))
@@ -135,16 +181,20 @@ class test(gr.top_block, Qt.QWidget):
         # Connections
         ##################################################
         self.msg_connect((self.pdu_tagged_stream_to_pdu_0, 'pdus'), (self.satnogs_frame_encoder_0, 'pdu'))
-        self.msg_connect((self.satnogs_frame_encoder_0, 'pdu'), (self.blocks_message_debug_0_0, 'print'))
         self.msg_connect((self.satnogs_frame_encoder_0, 'pdu'), (self.blocks_message_debug_0_0, 'log'))
+        self.msg_connect((self.satnogs_frame_encoder_0, 'pdu'), (self.blocks_message_debug_0_0, 'print'))
         self.msg_connect((self.satnogs_frame_encoder_0, 'pdu'), (self.pdu_pdu_to_tagged_stream_0, 'pdus'))
         self.connect((self.analog_frequency_modulator_fc_0, 0), (self.blocks_tagged_stream_multiply_length_0_0_0, 0))
         self.connect((self.blocks_head_0, 0), (self.blocks_stream_to_tagged_stream_0, 0))
+        self.connect((self.blocks_null_source_0, 0), (self.blocks_throttle2_0, 0))
         self.connect((self.blocks_packed_to_unpacked_xx_0, 0), (self.digital_chunks_to_symbols_xx_0, 0))
-        self.connect((self.blocks_stream_to_tagged_stream_0, 0), (self.pdu_tagged_stream_to_pdu_0, 0))
+        self.connect((self.blocks_stream_mux_0, 0), (self.pdu_tagged_stream_to_pdu_0, 0))
+        self.connect((self.blocks_stream_to_tagged_stream_0, 0), (self.blocks_stream_mux_0, 0))
         self.connect((self.blocks_tagged_stream_align_0, 0), (self.osmosdr_sink_0, 0))
+        self.connect((self.blocks_tagged_stream_align_0, 0), (self.qtgui_freq_sink_x_0_0, 0))
         self.connect((self.blocks_tagged_stream_multiply_length_0_0, 0), (self.blocks_tagged_stream_align_0, 0))
         self.connect((self.blocks_tagged_stream_multiply_length_0_0_0, 0), (self.digital_burst_shaper_xx_0, 0))
+        self.connect((self.blocks_throttle2_0, 0), (self.blocks_stream_mux_0, 1))
         self.connect((self.blocks_vector_source_x_0, 0), (self.blocks_head_0, 0))
         self.connect((self.digital_burst_shaper_xx_0, 0), (self.pfb_arb_resampler_xxx_0_0_0, 0))
         self.connect((self.digital_chunks_to_symbols_xx_0, 0), (self.interp_fir_filter_xxx_0, 0))
@@ -253,6 +303,7 @@ class test(gr.top_block, Qt.QWidget):
         self.blocks_tagged_stream_multiply_length_0_0.set_scalar(((self.samp_rate/(self.baudrate*self.sps_tx))))
         self.osmosdr_sink_0.set_sample_rate(self.samp_rate)
         self.pfb_arb_resampler_xxx_0_0_0.set_rate((self.samp_rate/(self.baudrate*self.sps_tx)))
+        self.qtgui_freq_sink_x_0_0.set_frequency_range(401e6, self.samp_rate)
 
     def get_modulation_index(self):
         return self.modulation_index
