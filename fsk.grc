@@ -637,7 +637,7 @@ blocks:
     bus_structure: null
     coordinate: [872, 980.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: qtgui_time_sink_x_0
   id: qtgui_time_sink_x
   parameters:
@@ -734,7 +734,7 @@ blocks:
     bus_structure: null
     coordinate: [456, 372.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: qtgui_time_sink_x_0_0_0
   id: qtgui_time_sink_x
   parameters:
@@ -831,7 +831,7 @@ blocks:
     bus_structure: null
     coordinate: [1248, 116.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: qtgui_time_sink_x_1
   id: qtgui_time_sink_x
   parameters:
@@ -926,7 +926,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [720, 1004.0]
+    coordinate: [672, 1064.0]
     rotation: 0
     state: disabled
 - name: rx_freq
@@ -938,7 +938,7 @@ blocks:
     label: ''
     short_id: ''
     type: eng_float
-    value: 435e6
+    value: 401e6
   states:
     bus_sink: false
     bus_source: false
@@ -1038,6 +1038,26 @@ blocks:
     coordinate: [672, 676.0]
     rotation: 0
     state: enabled
+- name: soapy_bladerf_sink_0
+  id: soapy_bladerf_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    bandwidth: '0.0'
+    center_freq: tx_freq
+    comment: ''
+    dev_args: ''
+    freq_correction: '0'
+    gain: '20.0'
+    samp_rate: samp_rate
+    type: fc32
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 928.0]
+    rotation: 180
+    state: enabled
 - name: soapy_bladerf_source_0
   id: soapy_bladerf_source
   parameters:
@@ -1125,7 +1145,7 @@ blocks:
     label: ''
     short_id: ''
     type: eng_float
-    value: 435e6
+    value: 401e6
   states:
     bus_sink: false
     bus_source: false
@@ -1424,9 +1444,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 860.0]
+    coordinate: [528, 808.0]
     rotation: 180
-    state: enabled
+    state: disabled
 - name: uhd_usrp_source_0
   id: uhd_usrp_source
   parameters:
@@ -1965,6 +1985,7 @@ connections:
 - [blocks_packed_to_unpacked_xx_0, '0', digital_chunks_to_symbols_xx_0, '0']
 - [blocks_tagged_stream_align_0, '0', qtgui_freq_sink_x_0_0, '0']
 - [blocks_tagged_stream_align_0, '0', qtgui_time_sink_x_1, '0']
+- [blocks_tagged_stream_align_0, '0', soapy_bladerf_sink_0, '0']
 - [blocks_tagged_stream_align_0, '0', uhd_usrp_sink_0, '0']
 - [blocks_tagged_stream_multiply_length_0_0, '0', blocks_tagged_stream_align_0, '0']
 - [blocks_tagged_stream_multiply_length_0_0_0, '0', digital_burst_shaper_xx_0, '0']
