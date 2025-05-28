@@ -97,13 +97,13 @@ blocks:
   id: variable_ieee802_15_4_encoder
   parameters:
     comment: ''
-    crc_type: CRC32_C
+    crc_type: NONE
     custom_crc: satnogs.crc.crc16(0x1021, 0xFFFF, 0xFFFF, True, True)
     preamble: '0b01010101'
-    preamble_len: '12'
+    preamble_len: '8'
     rs: 'False'
     sync_word: '[0x1A, 0xCF, 0xFC, 0x1D]'
-    var_len: 'False'
+    var_len: 'True'
     whitening: satnogs.whitening.make_none()
   states:
     bus_sink: false
@@ -116,16 +116,16 @@ blocks:
   id: variable_ieee802_15_4_variant_decoder
   parameters:
     comment: ''
-    crc_type: CRC32_C
+    crc_type: NONE
     custom_crc: satnogs.crc.crc16(0x1021, 0xFFFF, 0xFFFF, True, True)
     drop_invalid: 'True'
     frame_len: 448-4
-    preamble: '[0b01010101]*12'
+    preamble: '[0b01010101]*8'
     preamble_thrsh: '0'
     rs: 'False'
     sync_thrsh: '4'
     sync_word: '[0x1A, 0xCF, 0xFC, 0x1D]'
-    var_len: 'False'
+    var_len: 'True'
     whitening: satnogs.whitening.make_ccsds(True)
   states:
     bus_sink: false
@@ -164,7 +164,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [688, 284.0]
+    coordinate: [680, 288.0]
     rotation: 0
     state: enabled
 - name: baudrate
@@ -211,7 +211,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 512.0]
+    coordinate: [888, 472.0]
     rotation: 0
     state: enabled
 - name: blocks_packed_to_unpacked_xx_0
@@ -230,7 +230,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 668.0]
+    coordinate: [1336, 544.0]
     rotation: 0
     state: enabled
 - name: blocks_tagged_stream_align_0
@@ -301,7 +301,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1304, 208.0]
+    coordinate: [1288, 248.0]
     rotation: 0
     state: enabled
 - name: digital_burst_shaper_xx_0
@@ -342,7 +342,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1472, 684.0]
+    coordinate: [1520, 688.0]
     rotation: 0
     state: enabled
 - name: digital_symbol_sync_xx_0
@@ -369,7 +369,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [928, 220.0]
+    coordinate: [904, 220.0]
     rotation: 0
     state: enabled
 - name: import_0
@@ -431,7 +431,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1032, 676.0]
+    coordinate: [1080, 616.0]
     rotation: 0
     state: enabled
 - name: pfb_arb_resampler_xxx_0
@@ -452,7 +452,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [456, 260.0]
+    coordinate: [392, 264.0]
     rotation: 0
     state: enabled
 - name: pfb_arb_resampler_xxx_0_0_0
@@ -554,7 +554,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [456, 148.0]
+    coordinate: [392, 152.0]
     rotation: 0
     state: enabled
 - name: qtgui_freq_sink_x_0_0
@@ -732,7 +732,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [456, 372.0]
+    coordinate: [392, 376.0]
     rotation: 0
     state: enabled
 - name: qtgui_time_sink_x_0_0_0
@@ -829,7 +829,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 116.0]
+    coordinate: [1272, 72.0]
     rotation: 0
     state: enabled
 - name: qtgui_time_sink_x_1
@@ -1001,7 +1001,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 660.0]
+    coordinate: [864, 656.0]
     rotation: 0
     state: enabled
 - name: satnogs_frame_decoder_0
@@ -1019,7 +1019,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1480, 152.0]
+    coordinate: [1480, 168.0]
     rotation: 0
     state: enabled
 - name: satnogs_frame_encoder_0
@@ -1035,7 +1035,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [672, 676.0]
+    coordinate: [616, 672.0]
     rotation: 0
     state: enabled
 - name: soapy_bladerf_sink_0
@@ -1906,7 +1906,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [240, 284.0]
+    coordinate: [176, 288.0]
     rotation: 0
     state: enabled
 - name: zeromq_pub_msg_sink_1
@@ -1940,7 +1940,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [400, 668.0]
+    coordinate: [384, 664.0]
     rotation: 0
     state: enabled
 - name: zmq_pub_uri
