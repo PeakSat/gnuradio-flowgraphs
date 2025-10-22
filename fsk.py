@@ -6,7 +6,7 @@
 #
 # GNU Radio Python Flow Graph
 # Title: SatNOGS-COMMS FSK transceiver
-# GNU Radio version: 3.10.12.0
+# GNU Radio version: 3.10.9.2
 
 from PyQt5 import Qt
 from gnuradio import qtgui
@@ -26,19 +26,19 @@ from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio import gr, pdu
-from gnuradio import soapy
+from gnuradio import uhd
+import time
 from gnuradio import zeromq
 from gnuradio.filter import pfb
 import gnuradio.satnogs as satnogs
 import numpy
 import sip
-import threading
 
 
 
 class fsk(gr.top_block, Qt.QWidget):
 
-    def __init__(self, baudrate=50e3, rx_freq=400.5e6, rx_gain=30.0, samp_rate=2e6, sps_rx=4, sps_tx=16, tx_freq=401.5e6, tx_gain=60.0, zmq_pub_uri='tcp://127.0.0.1:55000', zmq_sub_uri='tcp://127.0.0.1:55001'):
+    def __init__(self, baudrate=50e3, rx_freq=400.5e6, rx_gain=55.0, samp_rate=2e6, sps_rx=4, sps_tx=16, tx_freq=401.5e6, tx_gain=45, zmq_pub_uri='tcp://127.0.0.1:55000', zmq_sub_uri='tcp://127.0.0.1:55001'):
         gr.top_block.__init__(self, "SatNOGS-COMMS FSK transceiver", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("SatNOGS-COMMS FSK transceiver")
@@ -59,7 +59,7 @@ class fsk(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "fsk")
+        self.settings = Qt.QSettings("GNU Radio", "fsk")
 
         try:
             geometry = self.settings.value("geometry")
@@ -67,7 +67,6 @@ class fsk(gr.top_block, Qt.QWidget):
                 self.restoreGeometry(geometry)
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
-        self.flowgraph_started = threading.Event()
 
         ##################################################
         # Parameters
@@ -89,7 +88,7 @@ class fsk(gr.top_block, Qt.QWidget):
         self.sq_wave = sq_wave = (1.0, ) * sps_tx
         self.gaussian_taps = gaussian_taps = filter.firdes.gaussian(1.0, sps_tx, 1.0, 4*sps_tx)
         self.deviation = deviation = 25e3
-        self.variable_ieee802_15_4_variant_decoder_0 = variable_ieee802_15_4_variant_decoder_0 = satnogs.ieee802_15_4_variant_decoder([0b01010101]*32, 0, [0x1A, 0xCF, 0xFC, 0x1D], 4, satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, (512-4), False, False)
+        self.variable_ieee802_15_4_variant_decoder_0 = variable_ieee802_15_4_variant_decoder_0 = satnogs.ieee802_15_4_variant_decoder([0b01010101]*28, 5, [0x1A, 0xCF, 0xFC, 0x1D], 4, satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, (512-4), True, False)
         self.variable_ieee802_15_4_encoder_0 = variable_ieee802_15_4_encoder_0 = satnogs.ieee802_15_4_encoder(0b01010101, 32, [0x1A, 0xCF, 0xFC, 0x1D], satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, False)
         self.modulation_index = modulation_index = deviation / (baudrate / 2.0)
         self.interp_taps = interp_taps = numpy.convolve(numpy.array(gaussian_taps), numpy.array(sq_wave))
@@ -100,32 +99,35 @@ class fsk(gr.top_block, Qt.QWidget):
 
         self.zeromq_sub_msg_source_0 = zeromq.sub_msg_source(zmq_sub_uri, 100, False)
         self.zeromq_pub_msg_sink_1 = zeromq.pub_msg_sink(zmq_pub_uri, 100, True)
-        self.soapy_bladerf_source_0 = None
-        dev = 'driver=bladerf'
-        stream_args = ''
-        tune_args = ['']
-        settings = ['']
+        self.uhd_usrp_source_0 = uhd.usrp_source(
+            ",".join(("", '')),
+            uhd.stream_args(
+                cpu_format="fc32",
+                args='',
+                channels=list(range(0,1)),
+            ),
+        )
+        self.uhd_usrp_source_0.set_samp_rate(samp_rate)
+        self.uhd_usrp_source_0.set_time_unknown_pps(uhd.time_spec(0))
 
-        self.soapy_bladerf_source_0 = soapy.source(dev, "fc32", 1, '',
-                                  stream_args, tune_args, settings)
-        self.soapy_bladerf_source_0.set_sample_rate(0, samp_rate)
-        self.soapy_bladerf_source_0.set_bandwidth(0, 0.0)
-        self.soapy_bladerf_source_0.set_frequency(0, rx_freq)
-        self.soapy_bladerf_source_0.set_frequency_correction(0, 0)
-        self.soapy_bladerf_source_0.set_gain(0, min(max(0, -1.0), 60.0))
-        self.soapy_bladerf_sink_0 = None
-        dev = 'driver=bladerf'
-        stream_args = ''
-        tune_args = ['']
-        settings = ['']
+        self.uhd_usrp_source_0.set_center_freq(rx_freq, 0)
+        self.uhd_usrp_source_0.set_antenna("TX/RX", 0)
+        self.uhd_usrp_source_0.set_gain(rx_gain, 0)
+        self.uhd_usrp_sink_0 = uhd.usrp_sink(
+            ",".join(("", '')),
+            uhd.stream_args(
+                cpu_format="fc32",
+                args='',
+                channels=list(range(0,1)),
+            ),
+            "",
+        )
+        self.uhd_usrp_sink_0.set_samp_rate(samp_rate)
+        self.uhd_usrp_sink_0.set_time_unknown_pps(uhd.time_spec(0))
 
-        self.soapy_bladerf_sink_0 = soapy.sink(dev, "fc32", 1, '',
-                                  stream_args, tune_args, settings)
-        self.soapy_bladerf_sink_0.set_sample_rate(0, samp_rate)
-        self.soapy_bladerf_sink_0.set_bandwidth(0, 0.0)
-        self.soapy_bladerf_sink_0.set_frequency(0, tx_freq)
-        self.soapy_bladerf_sink_0.set_frequency_correction(0, 0)
-        self.soapy_bladerf_sink_0.set_gain(0, min(max(50, 17.0), 73.0))
+        self.uhd_usrp_sink_0.set_center_freq(tx_freq, 0)
+        self.uhd_usrp_sink_0.set_antenna("TX/RX", 0)
+        self.uhd_usrp_sink_0.set_gain(tx_gain, 0)
         self.satnogs_frame_encoder_0 = satnogs.frame_encoder(variable_ieee802_15_4_encoder_0)
         self.satnogs_frame_decoder_0 = satnogs.frame_decoder(variable_ieee802_15_4_variant_decoder_0, 1 * 1)
         self.satnogs_crc_async_0 = satnogs.crc_async(satnogs.crc.CRC32_C, False, False)
@@ -372,7 +374,7 @@ class fsk(gr.top_block, Qt.QWidget):
             flt_size=32,
             atten=100)
         self.pfb_arb_resampler_xxx_0.declare_sample_delay(0)
-        self.pdu_pdu_to_tagged_stream_0 = pdu.pdu_to_tagged_stream(gr.types.byte_t, 'tx_eob')
+        self.pdu_pdu_to_tagged_stream_0 = pdu.pdu_to_tagged_stream(gr.types.byte_t, 'packet_len')
         self.interp_fir_filter_xxx_0 = filter.interp_fir_filter_fff(sps_tx, interp_taps)
         self.interp_fir_filter_xxx_0.declare_sample_delay(0)
         self.digital_symbol_sync_xx_0 = digital.symbol_sync_ff(
@@ -388,16 +390,14 @@ class fsk(gr.top_block, Qt.QWidget):
             128,
             [])
         self.digital_chunks_to_symbols_xx_0 = digital.chunks_to_symbols_bf([-1, 1], 1)
-        self.digital_burst_shaper_xx_0 = digital.burst_shaper_cc(([]), 200000, 400000, False, "tx_eob")
+        self.digital_burst_shaper_xx_0 = digital.burst_shaper_cc(([]), 2000, 4000, False, 'packet_len')
         self.digital_binary_slicer_fb_0 = digital.binary_slicer_fb()
-        self.blocks_tagged_stream_multiply_length_0_0_0 = blocks.tagged_stream_multiply_length(gr.sizeof_gr_complex*1, 'tx_eob', ((sps_tx * 8) ))
-        self.blocks_tagged_stream_multiply_length_0_0 = blocks.tagged_stream_multiply_length(gr.sizeof_gr_complex*1, 'tx_eob', ((samp_rate/(baudrate*sps_tx))))
-        self.blocks_tagged_stream_align_0 = blocks.tagged_stream_align(gr.sizeof_gr_complex*1, 'tx_eob')
+        self.blocks_tagged_stream_multiply_length_0_0_0 = blocks.tagged_stream_multiply_length(gr.sizeof_gr_complex*1, 'packet_len', ((sps_tx * 8) ))
+        self.blocks_tagged_stream_multiply_length_0_0 = blocks.tagged_stream_multiply_length(gr.sizeof_gr_complex*1, 'packet_len', ((samp_rate/(baudrate*sps_tx))))
+        self.blocks_tagged_stream_align_0 = blocks.tagged_stream_align(gr.sizeof_gr_complex*1, 'packet_len')
         self.blocks_packed_to_unpacked_xx_0 = blocks.packed_to_unpacked_bb(1, gr.GR_MSB_FIRST)
         self.blocks_message_debug_0_0 = blocks.message_debug(True, gr.log_levels.info)
         self.blocks_message_debug_0 = blocks.message_debug(True, gr.log_levels.info)
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, '/home/maestroque/repos/gnuradio-flowgraphs/fsk_tx_cap.bin', False)
-        self.blocks_file_sink_0.set_unbuffered(False)
         self.analog_quadrature_demod_cf_0 = analog.quadrature_demod_cf(((2*math.pi*baudrate)/(sps_rx * baudrate)))
         self.analog_frequency_modulator_fc_0 = analog.frequency_modulator_fc(((math.pi*modulation_index) / sps_tx - (((math.pi*modulation_index) / sps_tx) * 0.1)))
 
@@ -414,10 +414,9 @@ class fsk(gr.top_block, Qt.QWidget):
         self.connect((self.analog_frequency_modulator_fc_0, 0), (self.blocks_tagged_stream_multiply_length_0_0_0, 0))
         self.connect((self.analog_quadrature_demod_cf_0, 0), (self.digital_symbol_sync_xx_0, 0))
         self.connect((self.blocks_packed_to_unpacked_xx_0, 0), (self.digital_chunks_to_symbols_xx_0, 0))
-        self.connect((self.blocks_tagged_stream_align_0, 0), (self.blocks_file_sink_0, 0))
         self.connect((self.blocks_tagged_stream_align_0, 0), (self.qtgui_freq_sink_x_0_0, 0))
         self.connect((self.blocks_tagged_stream_align_0, 0), (self.qtgui_time_sink_x_1, 0))
-        self.connect((self.blocks_tagged_stream_align_0, 0), (self.soapy_bladerf_sink_0, 0))
+        self.connect((self.blocks_tagged_stream_align_0, 0), (self.uhd_usrp_sink_0, 0))
         self.connect((self.blocks_tagged_stream_multiply_length_0_0, 0), (self.blocks_tagged_stream_align_0, 0))
         self.connect((self.blocks_tagged_stream_multiply_length_0_0_0, 0), (self.digital_burst_shaper_xx_0, 0))
         self.connect((self.digital_binary_slicer_fb_0, 0), (self.satnogs_frame_decoder_0, 0))
@@ -430,12 +429,12 @@ class fsk(gr.top_block, Qt.QWidget):
         self.connect((self.pdu_pdu_to_tagged_stream_0, 0), (self.blocks_packed_to_unpacked_xx_0, 0))
         self.connect((self.pfb_arb_resampler_xxx_0, 0), (self.analog_quadrature_demod_cf_0, 0))
         self.connect((self.pfb_arb_resampler_xxx_0_0_0, 0), (self.blocks_tagged_stream_multiply_length_0_0, 0))
-        self.connect((self.soapy_bladerf_source_0, 0), (self.pfb_arb_resampler_xxx_0, 0))
-        self.connect((self.soapy_bladerf_source_0, 0), (self.qtgui_freq_sink_x_0, 0))
+        self.connect((self.uhd_usrp_source_0, 0), (self.pfb_arb_resampler_xxx_0, 0))
+        self.connect((self.uhd_usrp_source_0, 0), (self.qtgui_freq_sink_x_0, 0))
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "fsk")
+        self.settings = Qt.QSettings("GNU Radio", "fsk")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -460,13 +459,14 @@ class fsk(gr.top_block, Qt.QWidget):
     def set_rx_freq(self, rx_freq):
         self.rx_freq = rx_freq
         self.qtgui_freq_sink_x_0.set_frequency_range(self.rx_freq, self.samp_rate)
-        self.soapy_bladerf_source_0.set_frequency(0, self.rx_freq)
+        self.uhd_usrp_source_0.set_center_freq(self.rx_freq, 0)
 
     def get_rx_gain(self):
         return self.rx_gain
 
     def set_rx_gain(self, rx_gain):
         self.rx_gain = rx_gain
+        self.uhd_usrp_source_0.set_gain(self.rx_gain, 0)
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -480,8 +480,8 @@ class fsk(gr.top_block, Qt.QWidget):
         self.qtgui_freq_sink_x_0_0.set_frequency_range(self.tx_freq, self.samp_rate)
         self.qtgui_time_sink_x_1.set_samp_rate(self.samp_rate)
         self.qtgui_time_sink_x_2.set_samp_rate(self.samp_rate)
-        self.soapy_bladerf_sink_0.set_sample_rate(0, self.samp_rate)
-        self.soapy_bladerf_source_0.set_sample_rate(0, self.samp_rate)
+        self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate)
+        self.uhd_usrp_source_0.set_samp_rate(self.samp_rate)
 
     def get_sps_rx(self):
         return self.sps_rx
@@ -510,13 +510,14 @@ class fsk(gr.top_block, Qt.QWidget):
     def set_tx_freq(self, tx_freq):
         self.tx_freq = tx_freq
         self.qtgui_freq_sink_x_0_0.set_frequency_range(self.tx_freq, self.samp_rate)
-        self.soapy_bladerf_sink_0.set_frequency(0, self.tx_freq)
+        self.uhd_usrp_sink_0.set_center_freq(self.tx_freq, 0)
 
     def get_tx_gain(self):
         return self.tx_gain
 
     def set_tx_gain(self, tx_gain):
         self.tx_gain = tx_gain
+        self.uhd_usrp_sink_0.set_gain(self.tx_gain, 0)
 
     def get_zmq_pub_uri(self):
         return self.zmq_pub_uri
@@ -588,7 +589,7 @@ def argument_parser():
         "--rx-freq", dest="rx_freq", type=eng_float, default=eng_notation.num_to_str(float(400.5e6)),
         help="Set rx_freq [default=%(default)r]")
     parser.add_argument(
-        "--rx-gain", dest="rx_gain", type=eng_float, default=eng_notation.num_to_str(float(30.0)),
+        "--rx-gain", dest="rx_gain", type=eng_float, default=eng_notation.num_to_str(float(55.0)),
         help="Set rx_gain [default=%(default)r]")
     parser.add_argument(
         "--samp-rate", dest="samp_rate", type=eng_float, default=eng_notation.num_to_str(float(2e6)),
@@ -603,7 +604,7 @@ def argument_parser():
         "--tx-freq", dest="tx_freq", type=eng_float, default=eng_notation.num_to_str(float(401.5e6)),
         help="Set tx_freq [default=%(default)r]")
     parser.add_argument(
-        "--tx-gain", dest="tx_gain", type=eng_float, default=eng_notation.num_to_str(float(60.0)),
+        "--tx-gain", dest="tx_gain", type=eng_float, default=eng_notation.num_to_str(float(45)),
         help="Set tx_gain [default=%(default)r]")
     parser.add_argument(
         "--zmq-pub-uri", dest="zmq_pub_uri", type=str, default='tcp://127.0.0.1:55000',
@@ -623,7 +624,6 @@ def main(top_block_cls=fsk, options=None):
     tb = top_block_cls(baudrate=options.baudrate, rx_freq=options.rx_freq, rx_gain=options.rx_gain, samp_rate=options.samp_rate, sps_rx=options.sps_rx, sps_tx=options.sps_tx, tx_freq=options.tx_freq, tx_gain=options.tx_gain, zmq_pub_uri=options.zmq_pub_uri, zmq_sub_uri=options.zmq_sub_uri)
 
     tb.start()
-    tb.flowgraph_started.set()
 
     tb.show()
 
