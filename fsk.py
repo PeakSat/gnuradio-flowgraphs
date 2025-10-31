@@ -88,7 +88,7 @@ class fsk(gr.top_block, Qt.QWidget):
         self.sq_wave = sq_wave = (1.0, ) * sps_tx
         self.gaussian_taps = gaussian_taps = filter.firdes.gaussian(1.0, sps_tx, 1.0, 4*sps_tx)
         self.deviation = deviation = 25e3
-        self.variable_ieee802_15_4_variant_decoder_0 = variable_ieee802_15_4_variant_decoder_0 = satnogs.ieee802_15_4_variant_decoder([0b01010101]*28, 5, [0x1A, 0xCF, 0xFC, 0x1D], 4, satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, (512-4), True, False)
+        self.variable_ieee802_15_4_variant_decoder_0 = variable_ieee802_15_4_variant_decoder_0 = satnogs.ieee802_15_4_variant_decoder([0b01010101]*28, 5, [0x1A, 0xCF, 0xFC, 0x1D], 4, satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, (196-4), True, False)
         self.variable_ieee802_15_4_encoder_0 = variable_ieee802_15_4_encoder_0 = satnogs.ieee802_15_4_encoder(0b01010101, 32, [0x1A, 0xCF, 0xFC, 0x1D], satnogs.crc.CRC32_C, satnogs.whitening.make_ccsds(True), False, False)
         self.modulation_index = modulation_index = deviation / (baudrate / 2.0)
         self.interp_taps = interp_taps = numpy.convolve(numpy.array(gaussian_taps), numpy.array(sq_wave))

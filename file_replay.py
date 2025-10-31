@@ -6,7 +6,7 @@
 #
 # GNU Radio Python Flow Graph
 # Title: Not titled yet
-# GNU Radio version: 3.10.12.0
+# GNU Radio version: 3.10.9.2
 
 from PyQt5 import Qt
 from gnuradio import qtgui
@@ -21,9 +21,9 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
-from gnuradio import soapy
+from gnuradio import uhd
+import time
 import sip
-import threading
 
 
 
@@ -50,7 +50,7 @@ class file_replay(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "file_replay")
+        self.settings = Qt.QSettings("GNU Radio", "file_replay")
 
         try:
             geometry = self.settings.value("geometry")
@@ -58,7 +58,6 @@ class file_replay(gr.top_block, Qt.QWidget):
                 self.restoreGeometry(geometry)
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
-        self.flowgraph_started = threading.Event()
 
         ##################################################
         # Parameters
@@ -71,19 +70,21 @@ class file_replay(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self.soapy_bladerf_sink_0 = None
-        dev = 'driver=bladerf'
-        stream_args = ''
-        tune_args = ['']
-        settings = ['']
+        self.uhd_usrp_sink_0 = uhd.usrp_sink(
+            ",".join(("", '')),
+            uhd.stream_args(
+                cpu_format="fc32",
+                args='',
+                channels=list(range(0,1)),
+            ),
+            "",
+        )
+        self.uhd_usrp_sink_0.set_samp_rate(samp_rate)
+        self.uhd_usrp_sink_0.set_time_unknown_pps(uhd.time_spec(0))
 
-        self.soapy_bladerf_sink_0 = soapy.sink(dev, "fc32", 1, '',
-                                  stream_args, tune_args, settings)
-        self.soapy_bladerf_sink_0.set_sample_rate(0, samp_rate)
-        self.soapy_bladerf_sink_0.set_bandwidth(0, 0.0)
-        self.soapy_bladerf_sink_0.set_frequency(0, tx_freq)
-        self.soapy_bladerf_sink_0.set_frequency_correction(0, 0)
-        self.soapy_bladerf_sink_0.set_gain(0, min(max(tx_gain, 17.0), 73.0))
+        self.uhd_usrp_sink_0.set_center_freq(tx_freq, 0)
+        self.uhd_usrp_sink_0.set_antenna("TX/RX", 0)
+        self.uhd_usrp_sink_0.set_gain(0, 0)
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
@@ -126,7 +127,7 @@ class file_replay(gr.top_block, Qt.QWidget):
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, '/home/maestroque/repos/gnuradio-flowgraphs/fsk_tx_cap.bin', True, 0, 0)
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, '/home/kikas/repos/gnuradio-flowgraphs/fsk_tx_cap.bin', True, 0, 0)
         self.blocks_file_source_0.set_begin_tag(pmt.PMT_NIL)
 
 
@@ -134,11 +135,11 @@ class file_replay(gr.top_block, Qt.QWidget):
         # Connections
         ##################################################
         self.connect((self.blocks_file_source_0, 0), (self.qtgui_freq_sink_x_0, 0))
-        self.connect((self.blocks_file_source_0, 0), (self.soapy_bladerf_sink_0, 0))
+        self.connect((self.blocks_file_source_0, 0), (self.uhd_usrp_sink_0, 0))
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "file_replay")
+        self.settings = Qt.QSettings("GNU Radio", "file_replay")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -151,21 +152,20 @@ class file_replay(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
-        self.soapy_bladerf_sink_0.set_sample_rate(0, self.samp_rate)
+        self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate)
 
     def get_tx_freq(self):
         return self.tx_freq
 
     def set_tx_freq(self, tx_freq):
         self.tx_freq = tx_freq
-        self.soapy_bladerf_sink_0.set_frequency(0, self.tx_freq)
+        self.uhd_usrp_sink_0.set_center_freq(self.tx_freq, 0)
 
     def get_tx_gain(self):
         return self.tx_gain
 
     def set_tx_gain(self, tx_gain):
         self.tx_gain = tx_gain
-        self.soapy_bladerf_sink_0.set_gain(0, min(max(self.tx_gain, 17.0), 73.0))
 
 
 
@@ -192,7 +192,6 @@ def main(top_block_cls=file_replay, options=None):
     tb = top_block_cls(samp_rate=options.samp_rate, tx_freq=options.tx_freq, tx_gain=options.tx_gain)
 
     tb.start()
-    tb.flowgraph_started.set()
 
     tb.show()
 
